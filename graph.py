@@ -23,3 +23,20 @@ class Graph(object):
                 if src != dest:
                     w = getOverlap(src['sequence'], dest['sequence'])
                     self.__adj_list[src['name']].append((dest['name'], w))
+
+    def __generate_edges(self):
+        edges = []
+        for vertex in self.__adj_list:
+            for neighbour in self.__adj_list[vertex]:
+                if {neighbour, vertex} not in edges:
+                    edges.append({vertex, neighbour})
+        return edges
+
+    def __str__(self):
+        res = "vertices: "
+        for k in self.__adj_list:
+            res += str(k) + " "
+        res += "\nedges: "
+        for edge in self.__generate_edges():
+            res += str(edge) + " "
+        return res
