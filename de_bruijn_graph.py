@@ -14,9 +14,6 @@ class Node:
         self.out_degree = 0
 
     def add_adj(self, label):
-        self.adj_list.append(label)
-
-    def add_adj(self, label):
         is_adj, index = self.is_adj(label)
         if is_adj:
             self.adj_list[index][1] += 1
@@ -52,7 +49,7 @@ class Graph:
         return None
 
     def print_graph(self):
-        with open('out.txt', 'a') as f:
+        with open('out.txt', 'w') as f:
             for node in self.node_list:
                 output = "" + node.label + " : "
                 for adj_node in node.adj_list:
@@ -65,7 +62,7 @@ def build(fn, k=31):
 
     records = SeqIO.parse(fn, 'fastq')
 
-    records = [record for i, record in enumerate(records) if i < 50]
+    # records = [record for i, record in enumerate(records) if i < 50]
 
     for record in records:
 
