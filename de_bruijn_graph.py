@@ -1,82 +1,87 @@
 import sys, os
 from Bio import SeqIO
 
-class Node(object):
+def kmers(seq, k):
+    return [seq[i:i + k] for i in range(len(seq) - k)]
+
+class Node:
     """docstring for Node."""
 
-    def __init__(self, km):
-        self.kmer = km
+    def __init__(self, label, adj_list, in_degree, out_degree):
+        self.label = label
+        self.adj_list = adj_list
         self.in_degree = 0
         self.out_degree = 0
 
-class Edge(object):
-    """docstring for Edge."""
+    def add_adj(self, label):
+        self.adj_list.append(label)
 
-    def __init__(self, km):
-        self.kmer = km
+    def add_adj(self, label):
+        is_adj, index = self.is_adj(label)
+        if is_adj:
+            self.adj_list[index][1] += 1
+        else:
+            self.adj_list.append([label, 1])
+
+    def is_adj(self, label):
+        for i, edge in enumerate(self.adj_list):
+            if edge[0] == label:
+                return True, i
+        return False, -1
+
+
+class Graph:
+    """docstring for Graph."""
+
+    def __init__(self, node_list=[]):
+        self.node_list = node_list
+
+    def add_node(self, label):
+        node = self.find_node(label)
+        if node is None:
+            new_node = Node(label, [], 0, 0)
+            self.node_list.append(new_node)
+            return new_node
+        else:
+            return node
+
+    def find_node(self, label):
+        for node in self.node_list:
+            if node.label == label:
+                return node
+        return None
+
+    def print_graph(self):
+        with open('out.txt', 'a') as f:
+            for node in self.node_list:
+                output = "" + node.label + " : "
+                for adj_node in node.adj_list:
+                    output += "(" + adj_node[0] + ", " + str(adj_node[1]) +") "
+                print(output, file=f)
 
 def build(fn, k=31):
-    adj_list = dict()
-    vertices = dict()
+
+    G = Graph()
 
     records = SeqIO.parse(fn, 'fastq')
+
+    records = [record for i, record in enumerate(records) if i < 50]
 
     for record in records:
 
         seq = str(record.seq)
 
-        for i in range(len(seq) - k):
-            v1 = seq[i:i+k]
-            v2 = seq[i+1:i+k+1]
+        for kmer in kmers(seq, k):
 
-            if v1 in adj_list.keys():
-                vertices[v1].out_degree += 1
-                adj_list[v1].append(Edge(v2))
-            else:
-                vertices[v1] = Node(v1)
-                vertices[v1].out_degree += 1
-                adj_list[v1] = [Edge(v2)]
+            src = G.add_node(kmer[0:k-1])
+            dest = G.add_node(kmer[1:k])
 
-            if v2 in adj_list.keys():
-                vertices[v2].in_degree += 1
-            else:
-                vertices[v2] = Node(v2)
-                vertices[v2].in_degree += 1
-                adj_list[v2] = []
+            src.out_degree += 1
+            src.add_adj(dest.label)
 
-    return (vertices, adj_list)
+            dest.in_degree += 1
 
-def print_graph(g):
-    """ Print the information in the graph to be (somewhat) presentable """
-    V = g[0]
-    E = g[1]
-    for k in V.keys():
-        print("name: ", V[k].kmer, ". indegree: ", V[k].in_degree, ". outdegree: ", V[k].out_degree)
-        print("Edges: ")
-        for e in E[k]:
-            print(e.kmer)
-        print()
-
-def output_contigs(g):
-    """ Perform searching for Eulerian path in the graph to output genome assembly"""
-    V = g[0]
-    E = g[1]
-    # Pick starting node (the vertex with zero in degree)
-    start = list(V.keys())[0]
-    for k in V.keys():
-        if V[k].in_degree < V[start].in_degree:
-            start = k
-
-    contig = start
-    current = start
-    while len(E[current]) > 0:
-        # Pick the next node to be traversed (for now, at random)
-        next = E[current][0]
-        del E[current][0]
-        contig += next.kmer[-1]
-        current = next.kmer
-
-    return contig
+    return G
 
 try:
     fn = sys.argv[1]
@@ -86,4 +91,6 @@ except IndexError as ie:
 if not os.path.exists(fn):
     raise SystemError("Error: File does not exist\n")
 
-print(output_contigs(build(fn)))
+G = build(fn)
+
+G.print_graph()
